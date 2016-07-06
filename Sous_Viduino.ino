@@ -75,6 +75,7 @@ double aTuneNoise=1;
 unsigned int aTuneLookBack=20;
 
 boolean tuning = false;
+boolean preheat = false;
 
 PID_ATune aTune(&Input, &Output);
 
@@ -221,7 +222,7 @@ void loop()
       Off();
       break;
    case SETP:
-      Tune_Sp();
+      Adjust_Sp();
       break;
     case RUN:
       Run();
@@ -239,7 +240,7 @@ void loop()
 }
 
 // ************************************************
-// Initial State - press RIGHT to enter setpoint
+// Initial State - press RIGHT to start
 // ************************************************
 void Off()
 {
@@ -271,7 +272,7 @@ void Off()
 // LEFT for OFF
 // SHIFT for 10x tuning
 // ************************************************
-void Tune_Sp()
+void Adjust_Sp()
 {
    lcd.setBacklight(TEAL);
    lcd.print(F("Set Temperature:"));
@@ -535,7 +536,11 @@ void Run()
       lcd.print("%");
 
       lcd.setCursor(15,0);
-      if (tuning)
+      if (preheat)
+      {
+        lcd.print("P");
+      }
+      else if (tuning)
       {
         lcd.print("T");
       }
@@ -577,7 +582,16 @@ void DoControl()
   }
   else // Execute control algorithm
   {
-     myPID.Compute();
+    if (Setpoint - Input > 3)
+    {
+      preheat = true;            // suppress control until within range
+      Output = WindowSize;
+    }
+    else
+    {
+      preheat = false;
+      myPID.Compute();
+    }
   }
   
   // Time Proportional relay state is updated regularly via timer interrupt.
